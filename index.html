@@ -1,31 +1,75 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-5899C1DJM0"></script>
 
-  <title>Lucky Draw Event</title>
+  <title>Marble Roulette</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+
+  <link rel="apple-touch-icon" sizes="57x57" href="assets/apple-icon-57x57.png">
+  <link rel="apple-touch-icon" sizes="60x60" href="assets/apple-icon-60x60.png">
+  <link rel="apple-touch-icon" sizes="72x72" href="assets/apple-icon-72x72.png">
+  <link rel="apple-touch-icon" sizes="76x76" href="assets/apple-icon-76x76.png">
+  <link rel="apple-touch-icon" sizes="114x114" href="assets/apple-icon-114x114.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="assets/apple-icon-120x120.png">
+  <link rel="apple-touch-icon" sizes="144x144" href="assets/apple-icon-144x144.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="assets/apple-icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-icon-180x180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/android-icon-192x192.png">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="assets/favicon-96x96.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+  <link rel="manifest" href="assets/manifest.json">
+
+  <meta name="msapplication-TileColor" content="#ffffff">
+  <meta name="msapplication-TileImage" content="assets/ms-icon-144x144.png">
+  <meta name="theme-color" content="#ffffff">
+
+  <meta name="description" content="A lucky draw by dropping marbles">
+  <meta property="og:url" content="https://lazygyu.github.io/roulette/">
+  <meta property="og:title" content="Marble Roulette">
+  <meta property="og:description" content="A lucky draw by dropping marbles">
+  <meta property="og:site_name" content="lazygyu.github.io">
+  <meta property="og:type" content="website">
+
   <link rel='stylesheet' href='assets/style.scss' />
   
   <style>
+    /* 추가 스타일: 폰트 및 입력창 정리 */
+    body, button, input, select, textarea {
+      font-family: 'Noto Sans KR', sans-serif !important;
+    }
+    
+    /* 숫자 입력창 스타일 */
     #in_player_count {
       width: 100%;
       padding: 15px;
-      font-size: 1.5rem;
+      font-size: 1.2rem;
       border: 2px solid #ddd;
       border-radius: 8px;
       margin-bottom: 10px;
-      text-align: center;
-      font-weight: bold;
+      box-sizing: border-box;
+      background: rgba(255, 255, 255, 0.9);
     }
-    /* 숫자 입력기 화살표 숨기기 (선택사항) */
-    input::-webkit-outer-spin-button,
-    input::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
+
+    #in_player_count:focus {
+      border-color: #ffdd00;
+      outline: none;
+    }
+
+    /* 설정 패널 깔끔하게 */
+    .settings .left {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .actions {
+      margin-top: auto;
     }
   </style>
 </head>
@@ -37,31 +81,30 @@
   function gtag() {
     dataLayer.push(arguments);
   }
+
   gtag('js', new Date());
   gtag('config', 'G-5899C1DJM0');
 
-  // [수정됨] 인원수 숫자를 가져와서 1~N 배열로 반환
+  // 입력된 숫자만큼 1~N 배열 생성
   function getNames() {
-    const countInput = document.querySelector('#in_player_count');
-    let count = parseInt(countInput.value, 10);
+    const value = document.querySelector('#in_player_count').value;
+    const count = parseInt(value, 10);
     
-    if (isNaN(count) || count < 1) count = 1;
-    if (count > 500) count = 500; // 너무 큰 숫자 방지
-
+    if (isNaN(count) || count <= 0) return [];
+    
     const names = [];
     for (let i = 1; i <= count; i++) {
-      names.push(String(i)); // "1", "2", ... "N"
+      names.push(i.toString());
     }
     return names;
   }
 
   function getReady() {
     const names = getNames();
-    // 로컬 스토리지 저장은 인원수로 변경
-    localStorage.setItem('mbr_count', names.length);
-    
     window.roulette.setMarbles(names);
     ready = names.length > 0;
+    // 숫자 저장
+    localStorage.setItem('mbr_count', document.querySelector('#in_player_count').value);
     
     switch (winnerType) {
       case 'first':
@@ -94,6 +137,7 @@
     }
   }
 
+
   let ready = false;
   let winnerType = 'first';
 
@@ -103,19 +147,20 @@
 
   function initialize() {
     if (!window.roulette || !window.roulette.isReady) {
-      console.log('not loaded yet');
+      console.log('does not loaded yet');
       setTimeout(initialize, 100);
       return;
     }
     console.log('initializing start');
 
-    // [수정됨] 기존 이름 불러오기 로직 -> 저장된 인원수 불러오기로 변경
+    // 저장된 인원수 불러오기
     const savedCount = localStorage.getItem('mbr_count');
     if (savedCount) {
       document.querySelector('#in_player_count').value = savedCount;
+    } else {
+      document.querySelector('#in_player_count').value = "10";
     }
 
-    // [수정됨] 입력값이 변할 때마다 게임 준비 상태 업데이트
     document.querySelector('#in_player_count').addEventListener('input', () => {
       getReady();
     });
@@ -126,12 +171,15 @@
 
     document.querySelector('#btnStart').addEventListener('click', () => {
       if (!ready) return;
+      gtag && gtag('event', 'start', {
+        'event_category': 'roulette',
+        'event_label': 'start',
+        'value': window.roulette.getCount(),
+      });
       window.roulette.start();
       document.querySelector('#settings').classList.add('hide');
-      // donate 숨김 로직 삭제됨 (애초에 요소를 삭제했으므로)
     });
 
-    // 설정 관련 이벤트 리스너들
     document.querySelector('#chkAutoRecording').addEventListener('change', (e) => {
       window.options.autoRecording = e.target.matches(':checked');
       window.roulette.setAutoRecording(window.options.autoRecording);
@@ -175,13 +223,16 @@
       simpleToast(e.detail);
     });
 
-    // 맵 셀렉터 초기화
+    document.querySelector('#btnShuffle').click();
+
     const maps = window.roulette.getMaps();
     const mapSelector = document.querySelector('#sltMap');
     maps.forEach((map) => {
       const option = document.createElement('option');
       option.value = map.index;
       option.innerHTML = map.title;
+      option.setAttribute('data-trans', '');
+      window.translateElement(option);
       mapSelector.append(option);
     });
     mapSelector.addEventListener('change', (e) => {
@@ -189,13 +240,16 @@
       window.roulette.setMap(index);
     });
 
-    // 초기 셔플 실행
-    document.querySelector('#btnShuffle').click();
-
     function simpleToast(msg) {
       const toast = document.createElement('div');
       toast.classList.add('toast');
       toast.innerHTML = msg;
+
+      if (window.translateElement) {
+        console.log('try to translate');
+        window.translateElement(toast);
+      }
+
       document.body.appendChild(toast);
       setTimeout(() => {
         document.body.removeChild(toast);
@@ -203,7 +257,6 @@
     }
   }
 </script>
-
 <div id="settings" class="settings">
   <div class="right">
     <div class="row">
@@ -244,10 +297,9 @@
       </div>
     </div>
   </div>
-  
   <div class="left">
-    <h3 data-trans>참가 인원 설정</h3>
-    <input type="number" id="in_player_count" value="10" min="1" max="500" placeholder="참가 인원수 입력">
+    <h3 data-trans>참가 인원 수 입력 (Enter Count)</h3>
+    <input type="number" id="in_player_count" placeholder="참가자 수 (예: 10)" min="1" value="10">
     
     <div class="actions">
       <button id="btnShuffle">
@@ -262,5 +314,6 @@
   </div>
 </div>
 
+<div class="copyright">&copy; 2022-2025. Marble Roulette</div>
 </body>
 </html>
