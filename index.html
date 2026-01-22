@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-5899C1DJM0"></script>
+
+  <title>Lucky Draw Event</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+  <link rel='stylesheet' href='assets/style.scss' />
+  
+  <style>
+    #in_player_count {
+      width: 100%;
+      padding: 15px;
+      font-size: 1.5rem;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      text-align: center;
+      font-weight: bold;
+    }
+    /* 숫자 입력기 화살표 숨기기 (선택사항) */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+<script type="module" src="./src/index.ts"></script>
+<script type="text/javascript">
+  window.dataLayer = window.dataLayer || [];
+
+  function gtag() {
+    dataLayer.push(arguments);
+  }
+  gtag('js', new Date());
+  gtag('config', 'G-5899C1DJM0');
+
+  // [수정됨] 인원수 숫자를 가져와서 1~N 배열로 반환
+  function getNames() {
+    const countInput = document.querySelector('#in_player_count');
+    let count = parseInt(countInput.value, 10);
+    
+    if (isNaN(count) || count < 1) count = 1;
+    if (count > 500) count = 500; // 너무 큰 숫자 방지
+
+    const names = [];
+    for (let i = 1; i <= count; i++) {
+      names.push(String(i)); // "1", "2", ... "N"
+    }
+    return names;
+  }
+
+  function getReady() {
+    const names = getNames();
+    // 로컬 스토리지 저장은 인원수로 변경
+    localStorage.setItem('mbr_count', names.length);
+    
+    window.roulette.setMarbles(names);
+    ready = names.length > 0;
+    
+    switch (winnerType) {
+      case 'first':
+        setWinnerRank(1);
+        break;
+      case 'last':
+        const total = window.roulette.getCount();
+        setWinnerRank(total);
+        break;
+    }
+  }
+
+  function setWinnerRank(rank) {
+    document.querySelector('#in_winningRank').value = rank;
+    window.options.winningRank = rank - 1;
+    window.roulette.setWinningRank(window.options.winningRank);
+
+    if (winnerType === 'first') {
+      document.querySelector('.btn-first-winner').classList.toggle('active', true);
+      document.querySelector('.btn-last-winner').classList.toggle('active', false);
+      document.querySelector('#in_winningRank').classList.toggle('active', false);
+    } else if (winnerType === 'last') {
+      document.querySelector('.btn-first-winner').classList.toggle('active', false);
+      document.querySelector('.btn-last-winner').classList.toggle('active', true);
+      document.querySelector('#in_winningRank').classList.toggle('active', false);
+    } else if (winnerType === 'custom') {
+      document.querySelector('.btn-first-winner').classList.toggle('active', false);
+      document.querySelector('.btn-last-winner').classList.toggle('active', false);
+      document.querySelector('#in_winningRank').classList.toggle('active', true);
+    }
+  }
+
+  let ready = false;
+  let winnerType = 'first';
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initialize();
+  });
+
+  function initialize() {
+    if (!window.roulette || !window.roulette.isReady) {
+      console.log('not loaded yet');
+      setTimeout(initialize, 100);
+      return;
+    }
+    console.log('initializing start');
+
+    // [수정됨] 기존 이름 불러오기 로직 -> 저장된 인원수 불러오기로 변경
+    const savedCount = localStorage.getItem('mbr_count');
+    if (savedCount) {
+      document.querySelector('#in_player_count').value = savedCount;
+    }
+
+    // [수정됨] 입력값이 변할 때마다 게임 준비 상태 업데이트
+    document.querySelector('#in_player_count').addEventListener('input', () => {
+      getReady();
+    });
+
+    document.querySelector('#btnShuffle').addEventListener('click', () => {
+      getReady();
+    });
+
+    document.querySelector('#btnStart').addEventListener('click', () => {
+      if (!ready) return;
+      window.roulette.start();
+      document.querySelector('#settings').classList.add('hide');
+      // donate 숨김 로직 삭제됨 (애초에 요소를 삭제했으므로)
+    });
+
+    // 설정 관련 이벤트 리스너들
+    document.querySelector('#chkAutoRecording').addEventListener('change', (e) => {
+      window.options.autoRecording = e.target.matches(':checked');
+      window.roulette.setAutoRecording(window.options.autoRecording);
+    });
+
+    document.querySelector('#chkSkill').addEventListener('change', (e) => {
+      window.options.useSkills = e.target.matches(':checked');
+      window.roulette.setWinningRank(window.options.winningRank);
+    });
+
+    document.querySelector('#chkDarkMode').addEventListener('change', (e) => {
+      window.options.darkMode = e.target.matches(':checked');
+      window.roulette.setTheme(window.options.darkMode ? 'dark' : 'light');
+      document.documentElement.classList.toggle('light', !window.options.darkMode);
+    });
+
+    document.querySelector('#in_winningRank').addEventListener('change', (e) => {
+      const v = parseInt(e.target.value, 10);
+      winnerType = 'custom';
+      setWinnerRank(isNaN(v) ? 0 : v);
+    });
+
+    document.querySelector('.btn-last-winner').addEventListener('click', () => {
+      const total = window.roulette.getCount();
+      winnerType = 'last';
+      setWinnerRank(total);
+    });
+    document.querySelector('.btn-first-winner').addEventListener('click', () => {
+      winnerType = 'first';
+      setWinnerRank(1);
+    });
+
+    window.roulette.addEventListener('goal', () => {
+      ready = false;
+      setTimeout(() => {
+        document.querySelector('#settings').classList.remove('hide');
+      }, 3000);
+    });
+
+    window.roulette.addEventListener('message', (e) => {
+      simpleToast(e.detail);
+    });
+
+    // 맵 셀렉터 초기화
+    const maps = window.roulette.getMaps();
+    const mapSelector = document.querySelector('#sltMap');
+    maps.forEach((map) => {
+      const option = document.createElement('option');
+      option.value = map.index;
+      option.innerHTML = map.title;
+      mapSelector.append(option);
+    });
+    mapSelector.addEventListener('change', (e) => {
+      const index = e.target.value;
+      window.roulette.setMap(index);
+    });
+
+    // 초기 셔플 실행
+    document.querySelector('#btnShuffle').click();
+
+    function simpleToast(msg) {
+      const toast = document.createElement('div');
+      toast.classList.add('toast');
+      toast.innerHTML = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        document.body.removeChild(toast);
+      }, 1200);
+    }
+  }
+</script>
+
+<div id="settings" class="settings">
+  <div class="right">
+    <div class="row">
+      <label for='sltMap'>
+        <i class="icon map"></i>
+        <span data-trans>Map</span>
+      </label>
+      <select id="sltMap"></select>
+    </div>
+    <div class="row">
+      <label for='chkAutoRecording'>
+        <i class="icon record"></i>
+        <span data-trans>Recording</span>
+      </label>
+      <input type="checkbox" id="chkAutoRecording" />
+    </div>
+    <div class="row">
+      <label>
+        <i class="icon trophy"></i>
+        <span data-trans>The winner is</span>
+      </label>
+      <div class="btn-group">
+        <button class="btn-winner btn-first-winner active" data-trans>First</button>
+        <button class="btn-winner btn-last-winner" data-trans>Last</button>
+        <input type="number" id="in_winningRank" value="1" min="1" />
+      </div>
+    </div>
+    <div class="row">
+      <label for='chkSkill'>
+        <i class="icon bomb"></i>
+        <span data-trans>Using skills</span>
+      </label>
+      <input type="checkbox" id="chkSkill" checked />
+      <div class='theme'>
+        <i class='icon sun'></i>
+        <input type='checkbox' id='chkDarkMode' checked />
+        <i class='icon moon'></i>
+      </div>
+    </div>
+  </div>
+  
+  <div class="left">
+    <h3 data-trans>참가 인원 설정</h3>
+    <input type="number" id="in_player_count" value="10" min="1" max="500" placeholder="참가 인원수 입력">
+    
+    <div class="actions">
+      <button id="btnShuffle">
+        <i class="icon shuffle"></i>
+        <span data-trans>Shuffle</span>
+      </button>
+      <button id="btnStart">
+        <i class="icon play"></i>
+        <span data-trans>Start</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
